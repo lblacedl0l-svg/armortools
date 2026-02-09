@@ -1,0 +1,42 @@
+name: Windows Build
+on: [workflow_dispatch] # This allows you to click a button to start it
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Extract V8 Library
+        run: |
+          cd armorcore/v8/libraries/win32/release/
+          7z x v8_monolith.7z
+
+      - name: Generate Project
+        run: node armorcore/make -g direct3d11
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Build ArmorPaint
+        run: msbuild armorcore/build/ArmorPaint.sln /p:Configuration=Release /p:Platform=x64
+
+      - name: Prepare Artifact
+        run: |
+          mkdir build-folder
+          copy armorcore\build\x64\Release\ArmorPaint.exe build-folder\
+          xcopy /E /I build\krom build-folder\krom
+
+      - name: Upload Finished App
+        uses: actions/upload-artifact@v4
+        with:
+          name: ArmorPaint-Windows
+          path: build-folder/
